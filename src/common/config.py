@@ -17,6 +17,7 @@ class Settings:
     smtp_from: str | None
     smtp_use_tls: bool
     suburbs_path: str | None
+    suburb_profiles_path: str | None
 
 
 def load_settings() -> Settings:
@@ -34,6 +35,7 @@ def load_settings() -> Settings:
     smtp_from = os.getenv("SMTP_FROM") or None
     smtp_use_tls = os.getenv("SMTP_USE_TLS", "true").lower() in {"1", "true", "yes"}
     suburbs_path = os.getenv("SUBURBS_PATH") or None
+    suburb_profiles_path = os.getenv("SUBURB_PROFILES_PATH") or None
     return Settings(
         db_path=db_path,
         http_user_agent=http_user_agent,
@@ -46,4 +48,5 @@ def load_settings() -> Settings:
         smtp_from=smtp_from,
         smtp_use_tls=smtp_use_tls,
         suburbs_path=suburbs_path,
+        suburb_profiles_path=suburb_profiles_path,
     )

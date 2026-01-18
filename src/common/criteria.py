@@ -1,5 +1,6 @@
 import re
 from dataclasses import dataclass
+import csv
 from functools import lru_cache
 from pathlib import Path
 
@@ -13,6 +14,7 @@ class SearchCriteria:
     max_price: int | None
     bedrooms: int | None
     property_type: str | None
+    radius_km: float | None
 
 
 PROPERTY_TYPE_KEYWORDS = {
@@ -26,7 +28,8 @@ PROPERTY_TYPE_KEYWORDS = {
 
 
 def parse_search_query(text: str) -> SearchCriteria:
-    suburb = _match_suburb_from_list(text) or _extract_suburb(text)
+    radius_km, radius_suburb = _extract_radius_query(text)
+    suburb = radius_suburb or _match_suburb_from_list(text) or _extract_suburb(text)
     bedrooms = _extract_bedrooms(text)
     property_type = _extract_property_type(text)
     price_phrase = _extract_price_phrase(text)
@@ -37,6 +40,7 @@ def parse_search_query(text: str) -> SearchCriteria:
         max_price=max_price,
         bedrooms=bedrooms,
         property_type=property_type,
+        radius_km=radius_km,
     )
 
 
@@ -103,11 +107,30 @@ def _titlecase_words(text: str) -> str:
     return " ".join(word.capitalize() for word in text.split())
 
 
+def _extract_radius_query(text: str) -> tuple[float | None, str | None]:
+    match = re.search(
+        r"(\d+(?:\.\d+)?)\s*km\s*(?:to|from|of)\s+([a-zA-Z\s]+)",
+        text,
+        re.IGNORECASE,
+    )
+    if not match:
+        return None, None
+    try:
+        radius_km = float(match.group(1))
+    except ValueError:
+        return None, None
+    suburb_text = match.group(2).strip()
+    suburb = _match_suburb_from_list(suburb_text) or _extract_suburb(suburb_text)
+    return radius_km, suburb
+
+
 @lru_cache(maxsize=1)
 def _load_suburbs() -> list[str]:
     suburbs: list[str] = []
     default_path = Path(__file__).with_name("suburbs_vic.txt")
     _load_suburbs_from_path(default_path, suburbs)
+    data_path = Path("data/suburbs.csv")
+    _load_suburbs_from_path(data_path, suburbs)
     extra_path = _load_extra_suburbs_path()
     if extra_path:
         _load_suburbs_from_path(extra_path, suburbs)
@@ -126,6 +149,14 @@ def _load_extra_suburbs_path() -> Path | None:
 
 def _load_suburbs_from_path(path: Path, suburbs: list[str]) -> None:
     if not path.exists():
+        return
+    if path.suffix.lower() == ".csv":
+        with path.open("r", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                value = (row.get("suburb") or "").strip()
+                if value and value not in suburbs:
+                    suburbs.append(value)
         return
     with path.open("r", encoding="utf-8") as handle:
         for line in handle:

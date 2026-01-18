@@ -146,7 +146,8 @@ env.bak/
 venv.bak/
 
 # Local data
-data/
+data/*.db
+data/*.db-journal
 sample/
 
 # Spyder project settings

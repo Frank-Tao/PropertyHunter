@@ -88,6 +88,7 @@ def upsert_listings(conn: sqlite3.Connection, listings: Iterable[Listing]) -> in
 def query_listings(
     conn: sqlite3.Connection,
     suburb: str | None = None,
+    suburbs: list[str] | None = None,
     min_price: int | None = None,
     max_price: int | None = None,
     bedrooms: int | None = None,
@@ -95,27 +96,31 @@ def query_listings(
     since: str | None = None,
     limit: int = 50,
 ) -> list[sqlite3.Row]:
-    clauses = []
-    params: dict[str, Any] = {"limit": limit}
+    clauses: list[str] = []
+    params: list[Any] = []
 
-    if suburb:
-        clauses.append("suburb = :suburb")
-        params["suburb"] = suburb
+    if suburbs:
+        placeholders = ", ".join("?" for _ in suburbs)
+        clauses.append(f"suburb IN ({placeholders})")
+        params.extend(suburbs)
+    elif suburb:
+        clauses.append("suburb = ?")
+        params.append(suburb)
     if min_price is not None:
-        clauses.append("(price_min IS NULL OR price_min >= :min_price)")
-        params["min_price"] = min_price
+        clauses.append("(price_min IS NULL OR price_min >= ?)")
+        params.append(min_price)
     if max_price is not None:
-        clauses.append("(price_max IS NULL OR price_max <= :max_price)")
-        params["max_price"] = max_price
+        clauses.append("(price_max IS NULL OR price_max <= ?)")
+        params.append(max_price)
     if bedrooms is not None:
-        clauses.append("(bedrooms IS NULL OR bedrooms >= :bedrooms)")
-        params["bedrooms"] = bedrooms
+        clauses.append("(bedrooms IS NULL OR bedrooms >= ?)")
+        params.append(bedrooms)
     if property_type:
-        clauses.append("property_type = :property_type")
-        params["property_type"] = property_type
+        clauses.append("property_type = ?")
+        params.append(property_type)
     if since:
-        clauses.append("scraped_at > :since")
-        params["since"] = since
+        clauses.append("scraped_at > ?")
+        params.append(since)
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     query = f"""
@@ -123,8 +128,9 @@ def query_listings(
         FROM listings
         {where}
         ORDER BY scraped_at DESC
-        LIMIT :limit
+        LIMIT ?
     """
+    params.append(limit)
     return list(conn.execute(query, params))
 
 

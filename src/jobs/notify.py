@@ -27,6 +27,7 @@ def run_saved_searches() -> None:
         rows = query_listings(
             conn,
             suburb=criteria.get("suburb"),
+            suburbs=criteria.get("suburbs"),
             min_price=criteria.get("min_price"),
             max_price=criteria.get("max_price"),
             bedrooms=criteria.get("bedrooms"),
