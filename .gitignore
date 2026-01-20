@@ -206,6 +206,7 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+DG1__DS_DIR_HDR
 
 # Codex
 .codex/
